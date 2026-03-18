@@ -20,6 +20,7 @@ func main() {
 
 	pathFlag := flag.String("path", ".", "директория для обхода")
 	minFlag := flag.Int64("min", 0, "скрыть директории меньше N MB")
+	cleanFlag := flag.Int("clean", 0, "1 — запросить очистку cleanable-директорий после вывода")
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Использование: findspace [флаги]\n\n")
@@ -31,6 +32,10 @@ func main() {
 
 	flag.Parse()
 
+	if *cleanFlag != 0 && *cleanFlag != 1 {
+		fmt.Fprintf(os.Stderr, "error: -clean должен быть 0 или 1\n")
+		os.Exit(1)
+	}
 	if *minFlag < 0 {
 		fmt.Fprintf(os.Stderr, "error: -min должен быть >= 0\n")
 		os.Exit(1)
@@ -53,5 +58,9 @@ func main() {
 
 	for i, child := range root.Children {
 		printTree(child, "", i == len(root.Children)-1)
+	}
+
+	if *cleanFlag == 1 {
+		runClean()
 	}
 }
