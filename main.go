@@ -10,6 +10,10 @@ import (
 	"github.com/fatih/color"
 )
 
+// DirNode представляет узел дерева директорий.
+// Size содержит суммарный размер всех файлов внутри директории рекурсивно,
+// включая файлы в поддиректориях любой глубины.
+// Err заполняется, если при чтении директории возникла ошибка (например, нет прав).
 type DirNode struct {
 	Path     string
 	Name     string
@@ -18,6 +22,11 @@ type DirNode struct {
 	Err      error
 }
 
+// calcSize возвращает суммарный размер всех файлов внутри директории path,
+// обходя всё дерево рекурсивно через filepath.WalkDir.
+// Ошибки доступа к отдельным файлам игнорируются — подсчёт продолжается.
+// Используется для директорий, находящихся на максимальной глубине отображения,
+// чтобы их размер был посчитан полностью, но дочерние узлы не создавались.
 func calcSize(path string) int64 {
 	var total int64
 	_ = filepath.WalkDir(path, func(_ string, d fs.DirEntry, err error) error {
@@ -35,6 +44,18 @@ func calcSize(path string) int64 {
 	return total
 }
 
+// buildTree рекурсивно строит дерево директорий начиная с path глубиной depth уровней.
+//
+// Логика работы:
+//   - Читает содержимое директории path через os.ReadDir.
+//   - Для каждого файла добавляет его размер к Size текущего узла.
+//   - Для каждой поддиректории:
+//   - Если depth > 0 — рекурсивно вызывает buildTree с depth-1, создавая дочерний узел.
+//   - Если depth == 0 — считает размер через calcSize (без создания дочерних узлов),
+//     чтобы не превышать заданную глубину отображения.
+//
+// Дочерние узлы сортируются по убыванию размера — самые тяжёлые папки отображаются первыми.
+// При ошибке чтения директории узел возвращается с заполненным полем Err.
 func buildTree(path string, depth int) *DirNode {
 	name := filepath.Base(path)
 	if path == "/" {
@@ -79,6 +100,9 @@ func buildTree(path string, depth int) *DirNode {
 	return node
 }
 
+// formatSize форматирует размер в байтах в человекочитаемую строку.
+// Автоматически выбирает единицу измерения: GB, MB, KB или B.
+// Дробные значения выводятся с двумя знаками после запятой.
 func formatSize(b int64) string {
 	const (
 		KB = 1024
@@ -97,12 +121,26 @@ func formatSize(b int64) string {
 	}
 }
 
+// Цветовые схемы для вывода:
+//   - dirColor  — синий жирный для имён директорий
+//   - sizeColor — зелёный для размеров
+//   - errColor  — красный для сообщений об ошибках доступа
 var (
 	dirColor  = color.New(color.FgBlue, color.Bold)
 	sizeColor = color.New(color.FgGreen)
 	errColor  = color.New(color.FgRed)
 )
 
+// printTree рекурсивно выводит узел дерева директорий с отступами в стиле tree(1).
+//
+// Параметры:
+//   - node   — текущий узел для вывода
+//   - prefix — накопленный отступ для текущего уровня (строки-разделители │ или пробелы)
+//   - isLast — является ли узел последним среди своих соседей
+//     (влияет на выбор коннектора: └── для последнего, ├── для остальных)
+//
+// При ошибке доступа (node.Err != nil) выводит имя директории и пометку [permission denied],
+// не продолжая обход вглубь.
 func printTree(node *DirNode, prefix string, isLast bool) {
 	connector := "├── "
 	childPrefix := prefix + "│   "
@@ -131,6 +169,10 @@ func printTree(node *DirNode, prefix string, isLast bool) {
 	}
 }
 
+// main — точка входа. Принимает опциональный аргумент — путь к директории.
+// Если аргумент не передан, использует текущую директорию.
+// Строит дерево глубиной 3 уровня (корень + 3 уровня дочерних директорий)
+// и выводит его в stdout с цветовым форматированием.
 func main() {
 	path := "."
 	if len(os.Args) > 1 {
@@ -139,11 +181,12 @@ func main() {
 
 	abs, err := filepath.Abs(path)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 
-	root := buildTree(abs, 2) // root + 3 levels below = depth 2 for children
+	// depth=2: корень (уровень 0) → дочерние (1) → внуки (2) → правнуки считаются через calcSize
+	root := buildTree(abs, 2)
 
 	fmt.Printf("%s  %s\n",
 		dirColor.Sprint(abs),
