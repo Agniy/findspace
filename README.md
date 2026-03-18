@@ -14,19 +14,21 @@ sudo mv findspace /usr/local/bin/
 ## Использование
 
 ```
-findspace -path <dir> -min <MB>
+findspace -path <dir> -min <MB> [-clean 1]
 ```
 
 | Флаг | По умолчанию | Описание |
 |------|-------------|----------|
 | `-path` | `.` | Директория для обхода |
 | `-min` | `0` | Скрывать директории меньше N MB |
+| `-clean` | `0` | `1` — запросить очистку cleanable-директорий после вывода |
 
 ```bash
-findspace                          # текущая папка
-findspace -path /home/user         # конкретный путь
-findspace -path /home/user -min 500  # показать только >= 500 MB
-findspace -h                       # справка
+findspace                               # текущая папка
+findspace -path /home/user              # конкретный путь
+findspace -path /home/user -min 500     # показать только >= 500 MB
+findspace -path /home/user -clean 1     # показать дерево и предложить очистку
+findspace -h                            # справка
 ```
 
 ## Пример вывода
@@ -41,4 +43,15 @@ findspace -h                       # справка
 └── .local  3.90 GB
     └── share
         └── Trash  1.20 GB  ← можно почистить
+```
+
+С флагом `-clean 1` после дерева выводится список и запрос подтверждения:
+
+```
+  /home/user/.cache  18.39 GB
+  /home/user/.local/share/Trash  1.20 GB
+
+Итого можно освободить: 19.59 GB
+Очистить? [y/N]: y
+Очищено: 19.59 GB
 ```
