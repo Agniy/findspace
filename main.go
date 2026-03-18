@@ -1,39 +1,43 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 )
 
 // main — точка входа.
 //
-// Аргументы:
+// Флаги:
 //
-//	findspace [path] [min_mb]
-//	  path   — директория для обхода (по умолчанию ".")
-//	  min_mb — минимальный размер поддиректории в MB для отображения (по умолчанию 0)
+//	-path string  директория для обхода (по умолчанию ".")
+//	-min  int     скрывать директории меньше N MB (по умолчанию 0 — показывать всё)
 //
 // Строит дерево глубиной 3 уровня и выводит его в stdout с цветовым форматированием.
 func main() {
 	initCleanable()
 
-	path := "."
-	if len(os.Args) > 1 {
-		path = os.Args[1]
+	pathFlag := flag.String("path", ".", "директория для обхода")
+	minFlag := flag.Int64("min", 0, "скрыть директории меньше N MB")
+
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Использование: findspace [флаги]\n\n")
+		fmt.Fprintf(os.Stderr, "Флаги:\n")
+		flag.PrintDefaults()
+		fmt.Fprintf(os.Stderr, "\nПример:\n")
+		fmt.Fprintf(os.Stderr, "  findspace -path /home/user -min 500\n")
 	}
 
-	if len(os.Args) > 2 {
-		mb, err := strconv.ParseInt(os.Args[2], 10, 64)
-		if err != nil || mb < 0 {
-			_, _ = fmt.Fprintf(os.Stderr, "error: min_mb must be a non-negative integer, got %q\n", os.Args[2])
-			os.Exit(1)
-		}
-		minSize = mb * 1024 * 1024
-	}
+	flag.Parse()
 
-	abs, err := filepath.Abs(path)
+	if *minFlag < 0 {
+		fmt.Fprintf(os.Stderr, "error: -min должен быть >= 0\n")
+		os.Exit(1)
+	}
+	minSize = *minFlag * 1024 * 1024
+
+	abs, err := filepath.Abs(*pathFlag)
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)

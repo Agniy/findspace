@@ -6,18 +6,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 go build -o findspace .     # сборка бинарника
-go run . [path] [min_mb]    # запуск без сборки
+go run . [флаги]            # запуск без сборки
 go mod tidy                 # обновить зависимости
 ```
 
 ## Usage
 
 ```
-findspace [path] [min_mb]
+findspace -path <dir> -min <MB>
 ```
 
-- `path` — директория для обхода (по умолчанию `.`)
-- `min_mb` — скрыть директории меньше N MB (по умолчанию `0` — показывать всё)
+| Флаг | По умолчанию | Описание |
+|------|-------------|----------|
+| `-path` | `.` | Директория для обхода |
+| `-min` | `0` | Скрывать директории меньше N MB |
 
 ## Установка (Ubuntu)
 
@@ -28,11 +30,11 @@ sudo mv findspace /usr/local/bin/
 
 ## Architecture
 
-Четыре файла в одном пакете `main`:
+Четыре файла в пакете `main`:
 
 | Файл | Содержимое |
 |------|-----------|
-| `main.go` | Парсинг аргументов (`path`, `min_mb`), вызов `initCleanable` + `buildTree` + `printTree` |
+| `main.go` | Парсинг флагов (`-path`, `-min`), вызов `initCleanable` + `buildTree` + `printTree` |
 | `tree.go` | `DirNode`, `buildTree`, `calcSize`, переменные `sem` и `minSize` |
 | `display.go` | `printTree`, `formatSize`, цветовые переменные |
 | `cleanable.go` | `cleanable map[string]bool`, `initCleanable` |
@@ -53,4 +55,4 @@ sudo mv findspace /usr/local/bin/
 
 ### cleanable
 
-`initCleanable` строит `map[string]bool` из известных Ubuntu-путей (кеши пользователя, корзина, APT, Snap, Flatpak, пакетные менеджеры). Список находится целиком в `cleanable.go` — туда же добавлять новые пути.
+`initCleanable` строит `map[string]bool` из известных Ubuntu-путей (кеши пользователя, корзина, APT, Snap, Flatpak, пакетные менеджеры). Список целиком в `cleanable.go` — туда же добавлять новые пути.
