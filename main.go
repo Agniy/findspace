@@ -7,37 +7,37 @@ import (
 	"path/filepath"
 )
 
-// main — точка входа.
+// main is the entry point.
 //
-// Флаги:
+// Flags:
 //
-//	-path string  директория для обхода (по умолчанию ".")
-//	-min  int     скрывать директории меньше N MB (по умолчанию 0 — показывать всё)
+//	-path string  directory to scan (default ".")
+//	-min  int     hide directories smaller than N MB (default 0 — show all)
 //
-// Строит дерево глубиной 3 уровня и выводит его в stdout с цветовым форматированием.
+// Builds a 3-level directory tree and prints it to stdout with color formatting.
 func main() {
 	initCleanable()
 
-	pathFlag := flag.String("path", ".", "директория для обхода")
-	minFlag := flag.Int64("min", 0, "скрыть директории меньше N MB")
-	cleanFlag := flag.Int("clean", 0, "1 — запросить очистку cleanable-директорий после вывода")
+	pathFlag := flag.String("path", ".", "directory to scan")
+	minFlag := flag.Int64("min", 0, "hide directories smaller than N MB")
+	cleanFlag := flag.Int("clean", 0, "1 — prompt to clean cleanable directories after output")
 
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Использование: findspace [флаги]\n\n")
-		fmt.Fprintf(os.Stderr, "Флаги:\n")
+		fmt.Fprintf(os.Stderr, "Usage: findspace [flags]\n\n")
+		fmt.Fprintf(os.Stderr, "Flags:\n")
 		flag.PrintDefaults()
-		fmt.Fprintf(os.Stderr, "\nПример:\n")
+		fmt.Fprintf(os.Stderr, "\nExample:\n")
 		fmt.Fprintf(os.Stderr, "  findspace -path /home/user -min 500\n")
 	}
 
 	flag.Parse()
 
 	if *cleanFlag != 0 && *cleanFlag != 1 {
-		fmt.Fprintf(os.Stderr, "error: -clean должен быть 0 или 1\n")
+		fmt.Fprintf(os.Stderr, "error: -clean must be 0 or 1\n")
 		os.Exit(1)
 	}
 	if *minFlag < 0 {
-		fmt.Fprintf(os.Stderr, "error: -min должен быть >= 0\n")
+		fmt.Fprintf(os.Stderr, "error: -min must be >= 0\n")
 		os.Exit(1)
 	}
 	minSize = *minFlag * 1024 * 1024
@@ -48,7 +48,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// depth=2: корень (уровень 0) → дочерние (1) → внуки (2) → правнуки считаются через calcSize
+	// depth=2: root (level 0) → children (1) → grandchildren (2) → great-grandchildren sized via calcSize
 	root := buildTree(abs, 2)
 
 	fmt.Printf("%s  %s\n",

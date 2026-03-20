@@ -9,21 +9,21 @@ import (
 	"sync"
 )
 
-// minSize — минимальный размер директории в байтах для отображения в дереве.
-// Директории меньше этого порога не попадают в Children, но их размер
-// всё равно учитывается в суммарном размере родительского узла.
-// Устанавливается из второго аргумента CLI (в MB); по умолчанию 0 (показывать всё).
+// minSize is the minimum directory size in bytes to show in the tree.
+// Directories below this threshold are excluded from Children, but their size
+// is still counted toward the parent node's total.
+// Set from the CLI flag in MB; default 0 (show all).
 var minSize int64
 
-// sem — семафор для ограничения числа одновременно работающих горутин.
-// Без ограничения при обходе широкого дерева можно исчерпать лимит файловых дескрипторов ОС.
-// Размер буфера: CPU*8, т.к. операции I/O-bound и горутины большую часть времени ждут диск.
+// sem is a semaphore that limits the number of concurrently running goroutines.
+// Without a limit, scanning a wide tree can exhaust the OS file descriptor limit.
+// Buffer size: CPU*8, because operations are I/O-bound and goroutines mostly wait on disk.
 var sem = make(chan struct{}, runtime.NumCPU()*8)
 
-// DirNode представляет узел дерева директорий.
-// Size содержит суммарный размер всех файлов внутри директории рекурсивно,
-// включая файлы в поддиректориях любой глубины.
-// Err заполняется, если при чтении директории возникла ошибка (например, нет прав).
+// DirNode represents a node in the directory tree.
+// Size holds the total size of all files inside the directory recursively,
+// including files in subdirectories at any depth.
+// Err is set if an error occurred while reading the directory (e.g. permission denied).
 type DirNode struct {
 	Path     string
 	Name     string
@@ -32,11 +32,11 @@ type DirNode struct {
 	Err      error
 }
 
-// calcSize возвращает суммарный размер всех файлов внутри директории path,
-// обходя всё дерево рекурсивно через filepath.WalkDir.
-// Ошибки доступа к отдельным файлам игнорируются — подсчёт продолжается.
-// Используется для директорий на максимальной глубине отображения:
-// их размер нужен полный, но дочерние узлы создавать не нужно.
+// calcSize returns the total size of all files inside path,
+// walking the entire tree recursively via filepath.WalkDir.
+// Access errors for individual files are ignored — counting continues.
+// Used for directories at the maximum display depth:
+// their full size is needed, but child nodes do not need to be created.
 func calcSize(path string) int64 {
 	var total int64
 	_ = filepath.WalkDir(path, func(_ string, d fs.DirEntry, err error) error {
@@ -54,21 +54,21 @@ func calcSize(path string) int64 {
 	return total
 }
 
-// buildTree рекурсивно строит дерево директорий начиная с path глубиной depth уровней.
+// buildTree recursively builds a directory tree starting at path up to depth levels.
 //
-// Параллелизм: каждая поддиректория обрабатывается в отдельной горутине.
-// Семафор sem используется ТОЛЬКО на время самого I/O-вызова (os.ReadDir / calcSize),
-// а не на всё время жизни горутины. Это критично: держать семафор во время wg.Wait()
-// или рекурсивного buildTree приводит к дедлоку — дочерние горутины не могут получить
-// слот, пока родительская горутина его удерживает в ожидании этих же дочерних.
+// Concurrency: each subdirectory is processed in a separate goroutine.
+// The semaphore sem is held ONLY during the I/O call itself (os.ReadDir / calcSize),
+// not for the entire goroutine lifetime. This is critical: holding the semaphore during
+// wg.Wait() or recursive buildTree causes a deadlock — child goroutines cannot acquire
+// a slot while the parent goroutine holds one waiting for those same children.
 //
-// Логика по depth:
-//   - depth > 0 — рекурсивно строим поддерево через buildTree(child, depth-1).
-//   - depth == 0 — считаем размер через calcSize (полностью, но без дочерних узлов).
+// Depth logic:
+//   - depth > 0 — recursively build the subtree via buildTree(child, depth-1).
+//   - depth == 0 — compute size via calcSize (full walk, no child nodes created).
 //
-// Файлы (не директории) суммируются последовательно — их stat уже есть в entries.
-// Дочерние узлы сортируются по убыванию размера.
-// При ошибке чтения директории узел возвращается с заполненным полем Err.
+// Files (non-directories) are summed sequentially — their stat is already in entries.
+// Child nodes are sorted by descending size.
+// On a directory read error the node is returned with Err set.
 func buildTree(path string, depth int) *DirNode {
 	name := filepath.Base(path)
 	if path == "/" {
@@ -76,7 +76,7 @@ func buildTree(path string, depth int) *DirNode {
 	}
 	node := &DirNode{Path: path, Name: name}
 
-	// Семафор занимаем только на время os.ReadDir, сразу освобождаем.
+	// Acquire the semaphore only for the duration of os.ReadDir, then release immediately.
 	sem <- struct{}{}
 	entries, err := os.ReadDir(path)
 	<-sem
@@ -86,8 +86,8 @@ func buildTree(path string, depth int) *DirNode {
 		return node
 	}
 
-	// Размер файлов в текущей директории суммируем последовательно —
-	// stat-вызовы быстрые, и эти данные уже есть в entries.
+	// Sum file sizes in the current directory sequentially —
+	// stat calls are fast and the data is already present in entries.
 	var fileSize int64
 	var dirs []os.DirEntry
 	for _, entry := range entries {
@@ -100,8 +100,8 @@ func buildTree(path string, depth int) *DirNode {
 		}
 	}
 
-	// Каждую поддиректорию обрабатываем в отдельной горутине.
-	// Семафор НЕ держим во время wg.Wait() — иначе дедлок при рекурсии.
+	// Process each subdirectory in a separate goroutine.
+	// Do NOT hold the semaphore during wg.Wait() — that would cause a deadlock on recursion.
 	var (
 		mu       sync.Mutex
 		wg       sync.WaitGroup
@@ -119,10 +119,10 @@ func buildTree(path string, depth int) *DirNode {
 
 			var child *DirNode
 			if depth > 0 {
-				// Рекурсия управляет семафором самостоятельно внутри.
+				// Recursion manages the semaphore internally.
 				child = buildTree(cp, depth-1)
 			} else {
-				// calcSize — чистый I/O без рекурсии горутин, семафор безопасен.
+				// calcSize is pure I/O without goroutine recursion, semaphore is safe here.
 				sem <- struct{}{}
 				sz := calcSize(cp)
 				<-sem
@@ -131,8 +131,8 @@ func buildTree(path string, depth int) *DirNode {
 
 			mu.Lock()
 			dirSize += child.Size
-			// Добавляем в дерево только директории не меньше minSize.
-			// Размер мелких директорий всё равно учитывается в dirSize родителя.
+			// Only add directories of at least minSize to the tree.
+			// Small directories still contribute to the parent's dirSize.
 			if child.Size >= minSize {
 				children = append(children, child)
 			}

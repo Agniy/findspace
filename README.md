@@ -1,57 +1,57 @@
 # findspace
 
-Консольная утилита для визуализации дерева папок с размерами. Показывает 3 уровня вложенности, размеры в GB/MB/KB, сортирует от большего к меньшему. Помечает директории, которые можно безопасно почистить на Ubuntu.
+A CLI utility for visualizing a directory tree with sizes. Shows 3 levels of nesting, sizes in GB/MB/KB, sorted from largest to smallest. Marks directories that can be safely cleaned on Ubuntu.
 
-## Установка на Ubuntu
+## Installation on Ubuntu
 
 ```bash
 go build -o findspace .
 sudo mv findspace /usr/local/bin/
 ```
 
-Теперь `findspace` доступен из любой папки.
+Now `findspace` is available from any directory.
 
-## Использование
+## Usage
 
 ```
 findspace -path <dir> -min <MB> [-clean 1]
 ```
 
-| Флаг | По умолчанию | Описание |
-|------|-------------|----------|
-| `-path` | `.` | Директория для обхода |
-| `-min` | `0` | Скрывать директории меньше N MB |
-| `-clean` | `0` | `1` — запросить очистку cleanable-директорий после вывода |
+| Flag | Default | Description |
+|------|---------|-------------|
+| `-path` | `.` | Directory to scan |
+| `-min` | `0` | Hide directories smaller than N MB |
+| `-clean` | `0` | `1` — prompt to clean cleanable directories after output |
 
 ```bash
-findspace                               # текущая папка
-findspace -path /home/user              # конкретный путь
-findspace -path /home/user -min 500     # показать только >= 500 MB
-findspace -path /home/user -clean 1     # показать дерево и предложить очистку
-findspace -h                            # справка
+findspace                               # current directory
+findspace -path /home/user              # specific path
+findspace -path /home/user -min 500     # show only >= 500 MB
+findspace -path /home/user -clean 1     # show tree and offer cleanup
+findspace -h                            # help
 ```
 
-## Пример вывода
+## Example output
 
 ```
 /home/user  42.10 GB
-├── .cache  18.39 GB  ← можно почистить
-│   ├── JetBrains  6.12 GB  ← можно почистить
-│   └── pip  6.61 GB  ← можно почистить
+├── .cache  18.39 GB  ← can be cleaned
+│   ├── JetBrains  6.12 GB  ← can be cleaned
+│   └── pip  6.61 GB  ← can be cleaned
 ├── projects  11.10 GB
 │   └── backend  8.23 GB
 └── .local  3.90 GB
     └── share
-        └── Trash  1.20 GB  ← можно почистить
+        └── Trash  1.20 GB  ← can be cleaned
 ```
 
-С флагом `-clean 1` после дерева выводится список и запрос подтверждения:
+With the `-clean 1` flag, a list and confirmation prompt are shown after the tree:
 
 ```
   /home/user/.cache  18.39 GB
   /home/user/.local/share/Trash  1.20 GB
 
-Итого можно освободить: 19.59 GB
-Очистить? [y/N]: y
-Очищено: 19.59 GB
+Total space to free: 19.59 GB
+Clean? [y/N]: y
+Cleaned: 19.59 GB
 ```

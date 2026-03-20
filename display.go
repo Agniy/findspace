@@ -6,11 +6,11 @@ import (
 	"github.com/fatih/color"
 )
 
-// Цветовые схемы для вывода:
-//   - dirColor   — синий жирный для имён директорий
-//   - sizeColor  — зелёный для размеров
-//   - errColor   — красный для сообщений об ошибках доступа
-//   - cleanColor — жёлтый для маркера "← можно почистить"
+// Color schemes for output:
+//   - dirColor   — bold blue for directory names
+//   - sizeColor  — green for sizes
+//   - errColor   — red for permission error messages
+//   - cleanColor — yellow for the "← can be cleaned" marker
 var (
 	dirColor   = color.New(color.FgBlue, color.Bold)
 	sizeColor  = color.New(color.FgGreen)
@@ -18,9 +18,9 @@ var (
 	cleanColor = color.New(color.FgYellow)
 )
 
-// formatSize форматирует размер в байтах в человекочитаемую строку.
-// Автоматически выбирает единицу измерения: GB, MB, KB или B.
-// Дробные значения выводятся с двумя знаками после запятой.
+// formatSize formats a size in bytes into a human-readable string.
+// Automatically selects the unit: GB, MB, KB, or B.
+// Fractional values are displayed with two decimal places.
 func formatSize(b int64) string {
 	const (
 		KB = 1024
@@ -39,16 +39,16 @@ func formatSize(b int64) string {
 	}
 }
 
-// printTree рекурсивно выводит узел дерева директорий с отступами в стиле tree(1).
+// printTree recursively prints a directory tree node with tree(1)-style indentation.
 //
-// Параметры:
-//   - node   — текущий узел для вывода
-//   - prefix — накопленный отступ для текущего уровня (строки-разделители │ или пробелы)
-//   - isLast — является ли узел последним среди своих соседей
-//     (влияет на выбор коннектора: └── для последнего, ├── для остальных)
+// Parameters:
+//   - node   — current node to print
+//   - prefix — accumulated indent for the current level (│ separators or spaces)
+//   - isLast — whether the node is the last among its siblings
+//     (determines the connector: └── for the last, ├── for others)
 //
-// При ошибке доступа (node.Err != nil) выводит имя директории и пометку [permission denied],
-// не продолжая обход вглубь.
+// On a permission error (node.Err != nil) prints the directory name with [permission denied]
+// and does not descend further.
 func printTree(node *DirNode, prefix string, isLast bool) {
 	connector := "├── "
 	childPrefix := prefix + "│   "
@@ -68,7 +68,7 @@ func printTree(node *DirNode, prefix string, isLast bool) {
 
 	marker := ""
 	if cleanable[node.Path] {
-		marker = "  " + cleanColor.Sprint("← можно почистить")
+		marker = "  " + cleanColor.Sprint("← can be cleaned")
 	}
 
 	fmt.Printf("%s%s%s  %s%s\n",

@@ -5,15 +5,15 @@ import (
 	"path/filepath"
 )
 
-// cleanable — множество абсолютных путей, которые безопасно удалять на Ubuntu
-// для освобождения дискового пространства. Заполняется в initCleanable().
+// cleanable is the set of absolute paths that are safe to delete on Ubuntu
+// to free disk space. Populated by initCleanable().
 var cleanable map[string]bool
 
-// initCleanable строит множество cleanable: раскрывает ~ в реальный домашний каталог
-// и добавляет как пользовательские кеши, так и системные временные директории.
+// initCleanable builds the cleanable set: expands ~ to the real home directory
+// and adds both user caches and system temporary directories.
 //
-// Источники: Ubuntu Community Help Wiki (RecoverLostDiskSpace),
-// документация APT, Snap, Flatpak, JetBrains, npm, pip.
+// Sources: Ubuntu Community Help Wiki (RecoverLostDiskSpace),
+// APT, Snap, Flatpak, JetBrains, npm, pip documentation.
 func initCleanable() {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -22,37 +22,37 @@ func initCleanable() {
 	j := filepath.Join
 
 	paths := []string{
-		// Кеши пользователя — целиком безопасны для удаления,
-		// приложения пересоздают их при следующем запуске.
+		// User caches — entirely safe to delete;
+		// applications recreate them on next launch.
 		j(home, ".cache"),
-		j(home, ".cache", "JetBrains"),     // кеши IDE всех версий
-		j(home, ".cache", "pip"),           // pip http-кеш
-		j(home, ".cache", "google-chrome"), // кеш браузера
-		j(home, ".cache", "mozilla"),       // кеш Firefox
-		j(home, ".cache", "sublime-text"),  // кеш Sublime Text
+		j(home, ".cache", "JetBrains"),     // IDE caches for all versions
+		j(home, ".cache", "pip"),           // pip HTTP cache
+		j(home, ".cache", "google-chrome"), // browser cache
+		j(home, ".cache", "mozilla"),       // Firefox cache
+		j(home, ".cache", "sublime-text"),  // Sublime Text cache
 
-		// Кеши пакетных менеджеров — безопасны, пересчитываются по требованию.
+		// Package manager caches — safe to delete, rebuilt on demand.
 		j(home, ".npm"),
 		j(home, ".pip"),
 		j(home, ".gradle"),
 		j(home, ".composer"),
-		j(home, ".m2", "repository"), // Maven локальный репозиторий
+		j(home, ".m2", "repository"), // Maven local repository
 
-		// Корзина пользователя.
+		// User trash.
 		j(home, ".local", "share", "Trash"),
 
-		// Flatpak — кеш обновлений.
+		// Flatpak — update cache.
 		j(home, ".local", "share", "flatpak", "cache"),
 
-		// Системные временные директории — очищаются ОС, но можно и вручную.
+		// System temporary directories — cleaned by the OS, but can be cleared manually.
 		"/tmp",
 		"/var/tmp",
 
-		// APT — скачанные .deb-пакеты. Удалять через `sudo apt clean`.
+		// APT — downloaded .deb packages. Remove via `sudo apt clean`.
 		"/var/cache/apt",
 		"/var/cache/apt/archives",
 
-		// Snap — старые ревизии пакетов (активная ревизия не трогается).
+		// Snap — old package revisions (the active revision is not touched).
 		"/var/lib/snapd/cache",
 	}
 
