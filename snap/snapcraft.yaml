@@ -1,0 +1,26 @@
+name: findspace
+base: core22
+version: '1.0.0'
+summary: Find large directories on disk
+description: |
+  Terminal utility for visualizing a directory tree with sizes.
+  Shows 3 levels of nesting, sizes in GB/MB/KB, sorted from largest
+  to smallest. Marks directories that can be safely cleaned on Ubuntu
+  (caches, trash, APT, Snap, Flatpak, package managers).
+
+  Usage:
+    findspace -path /home -min 100
+
+grade: stable
+confinement: classic
+
+parts:
+  findspace:
+    plugin: go
+    source: .
+    build-snaps:
+      - go/1.21/stable
+
+apps:
+  findspace:
+    command: bin/findspace
