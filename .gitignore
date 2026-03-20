@@ -1,3 +1,11 @@
 findspace
 .idea/
 dist/
+
+# Snapcraft build artifacts
+*.snap
+parts/
+stage/
+prime/
+overlay/
+.snapcraft/
