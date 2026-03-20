@@ -4,6 +4,23 @@ A CLI utility for visualizing a directory tree with sizes. Shows 3 levels of nes
 
 ## Installation on Ubuntu
 
+**Via deb package (recommended):**
+
+```bash
+wget https://github.com/Agniy/findspace/releases/latest/download/findspace_1.0.0_amd64.deb
+sudo dpkg -i findspace_1.0.0_amd64.deb
+```
+
+**Binary directly:**
+
+```bash
+wget https://github.com/Agniy/findspace/releases/latest/download/findspace
+chmod +x findspace
+sudo mv findspace /usr/local/bin/
+```
+
+**Build from source:**
+
 ```bash
 go build -o findspace .
 sudo mv findspace /usr/local/bin/
